@@ -22,12 +22,14 @@
 #include "debug.h"
 #include "delay.h"
 #include "storage.h"
-#include "stm32f0xx_flash.h"
+
+#include <libopencm3/stm32/dma.h>
+#include <libopencm3/stm32/flash.h>
 
 // init for st eeprom emulation, set up number of variables.
 uint16_t EE_virtual_address_table[EE_NB_OF_VAR];
 
-#include "st_eeprom.h"
+#include "eeprom_emulation/st_eeprom.h"
 
 void eeprom_init(void) {
     debug("eeprom: init\n"); debug_flush();
@@ -39,7 +41,7 @@ void eeprom_init(void) {
     }
 
     // unlock flash for writing
-    FLASH_Unlock();
+    flash_unlock();
 
     // initialise eeprom emulation
     uint16_t res = EE_Init();
@@ -52,7 +54,7 @@ void eeprom_init(void) {
     }
 
     // lock flash again
-    FLASH_Lock();
+    flash_lock();
 }
 
 void eeprom_write_storage(void) {
@@ -67,7 +69,7 @@ void eeprom_write_storage(void) {
     debug("b\n");
     debug("in "); debug_put_uint16(EE_NB_OF_VAR);
     debug(" 16b entries.");*/
-    FLASH_Unlock();
+    flash_unlock();
     for (i = 0; i < EE_NB_OF_VAR; i++) {
         // fetch current value. make sure that out of bound access to storage reads as zero
         uint16_t value_now = 0;
@@ -106,7 +108,7 @@ void eeprom_write_storage(void) {
             }
         }
     }
-    FLASH_Lock();
+    flash_lock();
     // uint32_t t; for (t = 0; t < 20; t++) { delay_ms(100); wdt_reset(); }
 }
 
@@ -123,7 +125,7 @@ void eeprom_read_storage(void) {
     // invalidate storage
     storage.version = 0;
 
-    FLASH_Unlock();
+    flash_unlock();
     for (i = 0; i < EE_NB_OF_VAR; i++) {
         // fetch current 16bit value
         uint16_t value;
@@ -154,7 +156,7 @@ void eeprom_read_storage(void) {
         }
     }
     // debug_put_hex16(storage.checksum);
-    FLASH_Lock();
+    flash_lock();
     // uint32_t t; for (t = 0; t < 20; t++) { delay_ms(100); wdt_reset(); }
 }
 

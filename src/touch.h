@@ -23,20 +23,9 @@
 #include <stdint.h>
 
 #include "config.h"
-#include "stm32f0xx.h"
 
 void touch_init(void);
 void touch_test(void);
-static void touch_deinit_i2c(void);
-static void touch_init_i2c_mode(void);
-static void touch_init_i2c_gpio(void);
-static void touch_init_i2c_rcc(void);
-static void touch_init_i2c_free_bus(void);
-static uint32_t touch_i2c_read(uint8_t address, uint8_t *data, uint8_t len);
-static uint8_t touch_i2c_read_byte(uint8_t reg);
-static void touch_ft6236_debug_info(void);
-static void touch_init_isr(void);
-static void touch_ft6236_init(void);
 
 
 typedef struct {
@@ -47,7 +36,7 @@ typedef struct {
 
 touch_event_t touch_get_and_clear_last_event(void);
 
-void EXTI4_15_IRQHandler(void);
+// void EXTI4_15_IRQHandler(void);
 
 #define TOUCH_FT6236_MAX_TOUCH_POINTS     2
 
@@ -65,8 +54,8 @@ void EXTI4_15_IRQHandler(void);
 #define TOUCH_FT6236_EVENT_CONTACT        2
 #define TOUCH_FT6236_EVENT_NO_EVENT       3
 
-#define TOUCH_RESET_HI() { TOUCH_RESET_GPIO->BSRR = (TOUCH_RESET_PIN); }
-#define TOUCH_RESET_LO() { TOUCH_RESET_GPIO->BRR = (TOUCH_RESET_PIN); }
+#define TOUCH_RESET_HI() { gpio_set(TOUCH_RESET_GPIO, TOUCH_RESET_PIN); }
+#define TOUCH_RESET_LO() { gpio_clear(TOUCH_RESET_GPIO, TOUCH_RESET_PIN); }
 
 #define TOUCH_FT6236_GESTURE_MOVE_FLAG   0x10
 #define TOUCH_FT6236_GESTURE_MOVE_UP     0x10
@@ -86,6 +75,9 @@ void EXTI4_15_IRQHandler(void);
 #define TOUCH_GESTURE_MOUSE_MOVE (0x80+TOUCH_FT6236_EVENT_CONTACT)
 #define TOUCH_GESTURE_MOUSE_NONE (0x80+TOUCH_FT6236_EVENT_NO_EVENT)
 
+#define I2C_CR2_FREQ_MASK       0x3ff
+#define I2C_CCR_CCRMASK         0xfff
+#define I2C_TRISE_MASK          0x3f
 
 struct __attribute__((__packed__)) touch_ft6236_touchpoint {
     union {

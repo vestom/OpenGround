@@ -27,8 +27,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef __EEPROM_H
-#define __EEPROM_H
+#ifndef ST_EEPROM_H__
+#define ST_EEPROM_H__
 
 /* Includes ------------------------------------------------------------------*/
 #include <stdint.h>
@@ -41,10 +41,10 @@ extern long _emulated_eeprom_page_size;
 #define EEPROM_PAGE_SIZE             ((uint32_t)0x800)  /* Page size = 2KByte */
 
 /* EEPROM start address in Flash */
-#define EEPROM_START_ADDRESS  ((uint32_t)0x08000000+128*1024-2*EEPROM_PAGE_SIZE) /* EEPROM emulation start address:
-    //#define EEPROM_START_ADDRESS  ((uint32_t)0x0801F000) /* EEPROM emulation start address:
-    from sector2, after 8KByte of used
-    Flash memory */
+#define EEPROM_START_ADDRESS  ((uint32_t)0x08000000+128*1024-2*EEPROM_PAGE_SIZE)
+// EEPROM emulation start address:
+// #define EEPROM_START_ADDRESS  ((uint32_t)0x0801F000)
+// EEPROM emulation start address: from sector2, after 8KByte of used Flash memory
 
 /* Pages 0 and 1 base and end addresses */
 #define PAGE0_BASE_ADDRESS    ((uint32_t)(EEPROM_START_ADDRESS + 0x0000))
@@ -72,6 +72,16 @@ extern long _emulated_eeprom_page_size;
 /* Page full define */
 #define PAGE_FULL             ((uint8_t)0x80)
 
+
+typedef enum
+{
+  FLASH_BUSY = 1,
+  FLASH_ERROR_WRP,
+  FLASH_ERROR_PROGRAM,
+  FLASH_COMPLETE,
+  FLASH_TIMEOUT
+}FLASH_Status;
+
 /* Variables' number */
 //#define NB_OF_VAR             ((uint8_t)0x03)
 
@@ -82,6 +92,6 @@ uint16_t EE_Init(void);
 uint16_t EE_ReadVariable(uint16_t VirtAddress, uint16_t* Data);
 uint16_t EE_WriteVariable(uint16_t VirtAddress, uint16_t Data);
 
-#endif /* __EEPROM_H */
+#endif  // ST_EEPROM_H__
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

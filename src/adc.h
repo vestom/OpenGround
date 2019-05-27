@@ -26,12 +26,6 @@
 void adc_init(void);
 void adc_test(void);
 
-static void adc_init_rcc(void);
-static void adc_init_gpio(void);
-static void adc_init_mode(void);
-static void adc_init_dma(void);
-static void adc_dma_arm(void);
-
 void adc_process(void);
 
 uint16_t adc_get_channel(uint32_t id);
@@ -52,11 +46,8 @@ typedef enum {
   CHANNEL_ID_SIZE
 } channel_id_t;
 
-uint8_t *adc_get_channel_name(uint8_t i, bool short_descr);
+char *adc_get_channel_name(uint8_t i, bool short_descr);
 
-#define ADC_DMA_CHANNEL           DMA1_Channel1
-#define ADC_DMA_TC_FLAG           DMA1_FLAG_TC1
-#define ADC_CHANNEL_COUNT 11
 
 // rescaled data goes from -3200 to 3200
 // set zero threshold to 10% movement from absolute zero

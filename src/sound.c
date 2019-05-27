@@ -21,12 +21,20 @@
 #include "sound.h"
 #include "config.h"
 #include "debug.h"
-#include  "stm32f0xx_rcc.h"
-#include  "stm32f0xx_gpio.h"
-#include  "stm32f0xx_tim.h"
+#include "delay.h"
+#include "clocksource.h"
+
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/timer.h>
+#include <libopencm3/stm32/gpio.h>
+
+// internal static functions
+static void sound_init_rcc(void);
+static void sound_init_gpio(void);
 
 
 #define SOUND_QUEUE_SIZE 10
+volatile __IO uint32_t sound_tone_duration;
 static tone_t sound_queue[SOUND_QUEUE_SIZE];
 uint32_t sound_queue_state;
 
@@ -36,20 +44,15 @@ void sound_init(void) {
     sound_init_rcc();
     sound_init_gpio();
 
-    /*uint32_t i;
-    for (i = 1; i < 10; i++) {
-        sound_set_frequency(i*100);
-        delay_us(1000*1000);
-    }*/
     sound_queue_state = 0;
     sound_set_frequency(0);
 /*
     sound_queue[0].frequency   = 500;
-    sound_queue[0].duration_ms = 80;
+    sound_queue[0].duration_ms = 8000;
     sound_queue[1].frequency   = 890;
     sound_queue[1].duration_ms = 80;
     sound_queue[2].frequency   = 1000;
-    sound_queue[2].duration_ms = 80;
+    sound_queue[2].duration_ms = 8000;
     sound_queue[3].frequency   = 0;
     sound_queue[3].duration_ms = 0;
     sound_queue_state = 1;
@@ -81,66 +84,72 @@ void sound_play_low_time(void) {
 }
 
 static void sound_init_rcc(void) {
-    // enable all peripheral clocks:
-    RCC_AHBPeriphClockCmd(SPEAKER_GPIO_CLK, ENABLE);
+    // enable peripheral clock
+    rcc_periph_clock_enable(GPIO_RCC(SPEAKER_GPIO));
+
     // timer1 clock
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+    rcc_periph_clock_enable(RCC_TIM1);
 }
 
 static void sound_init_gpio(void) {
-    GPIO_InitTypeDef gpio_init;
-    GPIO_StructInit(&gpio_init);
-
     // set all gpio directions to output
-    gpio_init.GPIO_Pin   = SPEAKER_PIN;
-    gpio_init.GPIO_Mode  = GPIO_Mode_AF;
-    gpio_init.GPIO_OType = GPIO_OType_PP;
-    gpio_init.GPIO_Speed = GPIO_Speed_50MHz;
-    gpio_init.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-    GPIO_Init(SPEAKER_GPIO, &gpio_init);
+    gpio_mode_setup(SPEAKER_GPIO, GPIO_MODE_AF, GPIO_PUPD_NONE, SPEAKER_PIN);
+    gpio_set_output_options(SPEAKER_GPIO, GPIO_OTYPE_PP, GPIO_OSPEED_50MHZ, SPEAKER_PIN);
 
-    // connect TIM1 pins to AF
-    GPIO_PinAFConfig(SPEAKER_GPIO, SPEAKER_PIN_SOURCE, GPIO_AF_2);
+    // connect TIM1 pins to AF2 on gpio
+    gpio_set_af(SPEAKER_GPIO, GPIO_AF2, SPEAKER_PIN);
 }
 
 void sound_set_frequency(uint32_t freq) {
     uint32_t prescaler, period;
-    TIM_TimeBaseInitTypeDef  tim_init;
-    TIM_OCInitTypeDef  tim_oc_init;
 
     if (freq <= 200) {
         // switch off pwm
-        TIM_CtrlPWMOutputs(TIM1, DISABLE);
+        timer_disable_oc_output(TIM1, TIM_OC1);
+        // return;
     }
 
+    // reset TIMx peripheral
+    timer_reset(TIM1);
+
     // roughly factor into 16-bit
-    period    = (SystemCoreClock / 1) / freq;
+    period    = (rcc_timer_frequency / 1) / freq;
     prescaler = (period / 65536) + 1;
     period    = (period / prescaler);
 
-    // time base config
-    TIM_TimeBaseStructInit(&tim_init);
-    tim_init.TIM_Prescaler     = prescaler - 1;
-    tim_init.TIM_Period        = period - 1;
-    tim_init.TIM_ClockDivision = 0;
-    tim_init.TIM_CounterMode   = TIM_CounterMode_Up;
-    TIM_TimeBaseInit(TIM1, &tim_init);
+    // Set the timers global mode to:
+    // - use no divider
+    // - alignment edge
+    // - count direction up
+    timer_set_mode(TIM1,
+                   TIM_CR1_CKD_CK_INT,
+                   TIM_CR1_CMS_EDGE,
+                   TIM_CR1_DIR_UP);
 
-    // PWM1 Mode configuration: Channel1
-    TIM_OCStructInit(&tim_oc_init);
-    tim_oc_init.TIM_OCMode      = TIM_OCMode_PWM1;
-    tim_oc_init.TIM_OutputState = TIM_OutputState_Enable;
-    tim_oc_init.TIM_Pulse       = period / 2;  // 50/ 50 duty
-    tim_oc_init.TIM_OCPolarity  = TIM_OCPolarity_High;
+    timer_set_prescaler(TIM1, prescaler - 1);
+    timer_set_repetition_counter(TIM1, 0);
 
-    TIM_OC1Init(TIM1, &tim_oc_init);
-    TIM_OC1PreloadConfig(TIM1, TIM_OCPreload_Enable);
+    timer_enable_preload(TIM1);
+    timer_continuous_mode(TIM1);
+    timer_set_period(TIM1, period - 1);
 
-    // enable counter
-    TIM_Cmd(TIM1, ENABLE);
+    // start with disabled pwm output
+    timer_disable_oc_output(TIM1, TIM_OC1);
 
-    // main Output enable
-    TIM_CtrlPWMOutputs(TIM1, ENABLE);
+    // NOTE: on advanced timers as TIM1 we have
+    //       to break the main output, otherwise
+    //       no pwm output signal will be present on pin
+    timer_enable_break_main_output(TIM1);
+
+    // configure output mode
+    timer_set_oc_mode(TIM1, TIM_OC1, TIM_OCM_PWM1);
+    // set period for 50/50 duty cycle
+    timer_set_oc_value(TIM1, TIM_OC1, period / 2);
+    // enable pwm output
+    timer_enable_oc_output(TIM1, TIM_OC1);
+
+    // start timer
+    timer_enable_counter(TIM1);
 }
 
 void sound_play_sample(tone_t *tone) {

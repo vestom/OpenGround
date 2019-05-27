@@ -42,7 +42,7 @@ void frsky_tune_channel(uint8_t ch);
 void frsky_handle_overflows(void);
 void frsky_fetch_txid_and_hoptable(void);
 void frsky_calib_pll(void);
-void frsky_main(void);
+// void frsky_main(void);
 void frsky_handle_telemetry(void);
 
 uint8_t frsky_extract_rssi(uint8_t rssi_raw);
@@ -51,7 +51,7 @@ void frsky_tx_set_enabled(uint32_t enabled);
 void frsky_set_channel(uint8_t hop_index);
 void frsky_send_telemetry(uint8_t telemetry_id);
 void frsky_send_bindpacket(uint8_t bind_packet_id);
-void frsky_update_ppm(void);
+
 
 void frsky_do_clone_prepare(void);
 void frsky_do_clone_finish(void);
@@ -63,7 +63,6 @@ uint32_t frsky_fetch_txid_and_hoptable_do(void);
 void frsky_fetch_txid_and_hoptable_finish(void);
 
 void frsky_init_timer(void);
-void TIM3_IRQHandler(void);
 
 void frsky_get_rssi(uint8_t *rssi, uint8_t *rssi_telemetry);
 

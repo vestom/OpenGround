@@ -17,29 +17,13 @@
     author: fishpepper <AT> gmail.com
 */
 
-#ifndef TELEMETRY_H_
-#define TELEMETRY_H_
+#ifndef CLOCKSOURCE_H_
+#define CLOCKSOURCE_H_
 
 #include <stdint.h>
-#include "fifo.h"
+extern uint32_t rcc_timer_frequency;
 
-void telemetry_init(void);
-void telemetry_enqueue(uint8_t byte);
-void telemetry_process(void);
+void clocksource_init(void);
+void clocksource_hse_in_8_out_48(void);
 
-uint16_t telemetry_get_voltage(void);
-uint16_t telemetry_get_current(void);
-uint16_t telemetry_get_mah(void);
-
-// FrSky telemetry stream state machine
-typedef enum {
-  TELEMETRY_IDLE = 0,   // waiting for 0x5e frame marker
-  TELEMETRY_DATA_ID,    // waiting for dataID
-  TELEMETRY_DATA_LOW,   // waiting for data low byte
-  TELEMETRY_DATA_HIGH,  // waiting for data high byte
-  TELEMETRY_DATA_END,   // waiting for 0x5e end of frame marker
-  TELEMETRY_XOR = 0x80  // decode stuffed byte
-} telemetry_state_t;
-
-
-#endif  // TELEMETRY_H_
+#endif  // CLOCKSOURCE_H_
